@@ -3,6 +3,7 @@ import re
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
+from plotting import plot_indices
 from settings import load_settings, dump_settings, settings_state
 from signal_processing import generate_signal, amplitude_spectrum, combine_signals, signals_csv, evaluate_expression
 
@@ -149,18 +150,24 @@ else:
 cols[2].metric("FFT bin spacing", f"{(2 * np.pi if discrete else fs) / len(result):.4g} {'rad/sample' if discrete else 'Hz'}")
 
 
+plot_detail = st.radio("Plot detail", ["Full detail", "Overview"], horizontal=True, key="plot_detail")
+if plot_detail == "Full detail":
+    st.caption("All samples and FFT bins are plotted. Zoom in to inspect exact samples, narrow pulses and frequency peaks.")
+else:
+    st.caption("Overview retains minimum and maximum values per interval, separately for each trace. Small features may appear simplified; choose Full detail before zooming for exact samples. Calculations and CSV always use all data.")
+
+
 def chart(x, series, title, xlabel, markers=False):
-    indices = np.arange(len(x))
-    if len(x) > 20000:
-        indices = np.linspace(0, len(x) - 1, 20000, dtype=int)
-        st.caption(f"{title}: displaying 20,000 evenly spaced points. FFT and CSV use all samples.")
     fig = go.Figure()
     palette = ["#38bdf8", "#a78bfa", "#34d399", "#fb7185", "#facc15", "#22d3ee", "#e879f9", "#94a3b8"]
     for name, values in series:
+        indices = plot_indices(values, overview=plot_detail == "Overview")
         color = "#f97316" if name == "Result" else palette[(int(name[1:]) - 1) % len(palette)]
         fig.add_trace(go.Scattergl(x=x[indices], y=values[indices], name=name,
                                   mode="markers" if markers else "lines", connectgaps=False,
-                                  marker=dict(color=color), line=dict(color=color)))
+                                  marker=dict(color=color, size=4), line=dict(color=color),
+                                  customdata=indices,
+                                  hovertemplate="%{x:.8g}<br>Amplitude: %{y:.8g}<br>Index: %{customdata}<extra>%{fullData.name}</extra>"))
     fig.update_layout(title=title, xaxis_title=xlabel, yaxis_title="Amplitude",
                       height=360, margin=dict(l=20, r=20, t=50, b=20))
     st.plotly_chart(fig, width="stretch")
@@ -200,7 +207,7 @@ configuration = dict(
              for name, waveform, amplitude, frequency, phase, start, width in parameters],
     operation=operation, use_expression=use_expression,
     expression=expression.replace("−", "-").replace("×", "*"),
-    view=dict(show_inputs=show_inputs, fft_traces=selected_spectra))
+    view=dict(show_inputs=show_inputs, fft_traces=selected_spectra, plot_detail=plot_detail))
 with st.sidebar:
     st.download_button("Save settings JSON", dump_settings(configuration),
                        file_name="signal-settings.json", mime="application/json")

@@ -49,8 +49,7 @@ produce spectral leakage, so a peak bin need not equal the input amplitude.
 Sample above twice a sinusoid's frequency; sampling exactly at Nyquist can
 lose phase-dependent information. Ideal square and sawtooth waves have
 unbounded harmonics, so finite sampling always aliases some harmonics.
-Plots over 20,000 points show a reduced display; FFT calculations and CSV
-downloads always use the complete data.
+Full detail plots all samples and FFT bins; FFT calculations and CSV downloads always use the complete data.
 
 ## Deploy on Streamlit Community Cloud
 
@@ -137,3 +136,17 @@ at most 64 KB, and contain 1–8 signals within the existing sample limits.
 Only the current continuous/discrete mode is saved; hidden settings from the other
 mode, plot zoom and legend toggles are not included. Keep a saved copy before
 replacing a setup if you want to return to it later.
+## Plot detail and narrow features
+
+**Full detail** is the default: WebGL plots every sample and FFT bin (up to the
+existing 100,000-sample signal limit), so zooming reveals the actual stored data.
+Hover shows the original sample/bin index and precise axis/amplitude values.
+
+**Overview** offers a lighter display for long records by retaining the minimum
+and maximum in each interval, independently for every trace. This preserves
+single-sample pulses, positive/negative spikes and narrow FFT peaks that uniform
+subsampling could miss. Shapes can be simplified; use Full detail for exact zoom.
+Undefined-run boundaries are always retained and plots never connect across gaps.
+The overview targets 20,000 points per trace, but may exceed that when necessary
+to preserve many gaps. Short records are displayed unchanged. Plot detail is
+included in saved JSON setups; older settings files default to Full detail.

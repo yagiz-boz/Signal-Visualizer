@@ -2,6 +2,10 @@
 
 A browser-based signal processing demo built with Streamlit, Plotly and NumPy.
 
+**[Open the live demo](https://signal-visualizer-yagiz-boz.streamlit.app/)**
+
+The deployed demo tracks the `codex/streamlit-demo` branch on GitHub.
+
 ## Features
 
 - Sampled continuous sine, cosine, square and sawtooth waves.

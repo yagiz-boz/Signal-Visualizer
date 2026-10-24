@@ -113,3 +113,70 @@ def signals_csv(axis, signals, names, result, discrete=False):
     for row in zip(axis, *signals, result):
         writer.writerow([v if np.isfinite(v) else "" for v in row])
     return output.getvalue().encode("utf-8")
+
+
+def evaluate_expression(expression, signals, denominator_tolerance=1e-10):
+    """Evaluate only names, finite numbers, + - * /, unary signs and parentheses.
+
+    No Python evaluation or function calls are allowed. Division and overflow
+    use the same undefined-sample policy as the operation picker.
+    """
+    import ast
+
+    if not isinstance(expression, str) or not expression.strip():
+        raise ValueError("Enter an expression, for example S1 + S2.")
+    if len(expression) > 256:
+        raise ValueError("Keep expressions within 256 characters.")
+    if not signals:
+        raise ValueError("Add at least one signal.")
+    arrays = {name: np.asarray(values, dtype=float) for name, values in signals.items()}
+    shape = next(iter(arrays.values())).shape
+    if len(shape) != 1 or shape[0] < 2 or any(a.shape != shape or not np.all(np.isfinite(a)) for a in arrays.values()):
+        raise ValueError("Signals must contain finite samples on the same sample grid.")
+    if not np.isfinite(denominator_tolerance) or denominator_tolerance < 0:
+        raise ValueError("Denominator tolerance must be finite and nonnegative.")
+    try:
+        tree = ast.parse(expression.strip(), mode="eval")
+    except (SyntaxError, RecursionError) as error:
+        raise ValueError("Invalid expression. Use signal names, numbers, + - * / and parentheses.") from error
+    allowed = (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Name, ast.Load,
+               ast.Constant, ast.Add, ast.Sub, ast.Mult, ast.Div, ast.UAdd, ast.USub)
+    nodes = list(ast.walk(tree))
+    if len(nodes) > 128:
+        raise ValueError("Expression is too complex; use fewer operations.")
+    for node in nodes:
+        if not isinstance(node, allowed):
+            raise ValueError("Only signal names, numbers, + - * / and parentheses are supported.")
+        if isinstance(node, ast.Name) and node.id not in arrays:
+            raise ValueError(f"Unknown signal '{node.id}'. Available signals: {', '.join(arrays)}.")
+        if isinstance(node, ast.Constant):
+            try:
+                valid = type(node.value) in (int, float) and np.isfinite(float(node.value))
+            except (ValueError, OverflowError):
+                valid = False
+            if not valid:
+                raise ValueError("Use finite numeric constants only.")
+
+    def visit(node):
+        if isinstance(node, ast.Name):
+            return arrays[node.id].copy()
+        if isinstance(node, ast.Constant):
+            return np.full(shape, float(node.value))
+        if isinstance(node, ast.UnaryOp):
+            value = visit(node.operand)
+            return -value if isinstance(node.op, ast.USub) else value
+        left, right = visit(node.left), visit(node.right)
+        if isinstance(node.op, ast.Add):
+            result = left + right
+        elif isinstance(node.op, ast.Sub):
+            result = left - right
+        elif isinstance(node.op, ast.Mult):
+            result = left * right
+        else:
+            result = np.divide(left, right, out=np.full(shape, np.nan),
+                               where=np.abs(right) > denominator_tolerance)
+        result[~np.isfinite(result)] = np.nan
+        return result
+
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        return visit(tree.body)

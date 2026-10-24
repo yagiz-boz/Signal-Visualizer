@@ -2,7 +2,7 @@
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
-from signal_processing import generate_signal, amplitude_spectrum, combine_signals, signals_csv
+from signal_processing import generate_signal, amplitude_spectrum, combine_signals, signals_csv, evaluate_expression
 
 st.set_page_config(page_title="Signal Visualizer", page_icon="〰️", layout="wide")
 st.title("Signal Visualizer")
@@ -54,14 +54,19 @@ with st.sidebar:
                       args=(signal_id,), disabled=len(st.session_state.signal_ids) == 1)
             parameters.append((name, waveform, amplitude, frequency, phase))
 
-operation = st.selectbox("Operation", ["Add", "Subtract", "Multiply", "Divide"], key="operation")
+operation = st.selectbox("Operation", ["Add", "Subtract", "Multiply", "Divide"], key="operation", disabled=st.session_state.get("use_expression", False))
 symbols = {"Add": "+", "Subtract": "−", "Multiply": "×", "Divide": "/"}
 names = [p[0] for p in parameters]
 expression = names[0]
 for name in names[1:]:
     expression = f"({expression} {symbols[operation]} {name})"
+use_expression = st.checkbox("Use custom expression", key="use_expression")
+if use_expression:
+    expression = st.text_input("Expression", value=expression.replace("−", "-").replace("×", "*"), key="custom_expression", max_chars=256)
+    st.caption(f"Available signals: {', '.join(names)}. Use + - * / and parentheses, for example (S1 + S2) * 0.5. Multiplication and division take precedence over addition and subtraction.")
 st.subheader(f"Result = {expression}")
-st.caption("Operations run from left to right in signal order. With one signal, the result is that signal.")
+if not use_expression:
+    st.caption("Operations run from left to right in signal order. With one signal, the result is that signal.")
 
 signals = []
 try:
@@ -70,7 +75,7 @@ try:
         signals.append(values)
         for warning in warnings:
             st.warning(f"{name}: {warning}")
-    result = combine_signals(signals, operation)
+    result = evaluate_expression(expression, dict(zip(names, signals))) if use_expression else combine_signals(signals, operation)
 except ValueError as error:
     st.error(str(error))
     st.stop()
@@ -78,7 +83,7 @@ except ValueError as error:
 valid = np.isfinite(result)
 if not np.all(valid):
     st.warning(f"{np.count_nonzero(~valid):,} result samples are undefined. Division skips denominators with absolute value ≤ 1e-10. Undefined or overflowing values appear as plot gaps and empty CSV cells.")
-if len(signals) > 1 and operation in ("Multiply", "Divide"):
+if (use_expression and any(symbol in expression for symbol in "*/")) or (not use_expression and len(signals) > 1 and operation in ("Multiply", "Divide")):
     st.info("Multiplication and division can introduce additional frequency components. Input sampling warnings alone do not guarantee an alias-free result.")
 cols = st.columns(3)
 cols[0].metric("Samples", f"{len(result):,}")

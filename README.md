@@ -82,3 +82,19 @@ python -m unittest discover -s tests
 Operations run in displayed signal order: subtraction with three signals is (S1 - S2) - S3. One signal passes through unchanged. Signals share one time axis. Removing a signal preserves remaining identifiers and settings.
 
 Division skips denominators with absolute value at most 1e-10. Undefined and overflowing results appear as plot gaps and empty CSV cells. FFT and RMS are unavailable if any result sample is undefined; samples are never silently zero-filled. Multiplication and division can create frequencies beyond the input bandwidth, so input Nyquist checks alone cannot guarantee an alias-free result. Result units depend on the operation.
+
+## Custom expressions
+
+Enable **Use custom expression** to combine signals using different operations,
+for example `(S1 + S2) * S3`, `0.5 * S1 - S2`, or `S1 / (S2 + 2)`.
+Available signal names are listed beside the field and are case-sensitive.
+Numbers, parentheses, unary signs, and `+ - * /` are supported. Multiplication
+and division take precedence over addition and subtraction; parentheses override
+precedence. Constant-only expressions create a constant signal on the shared grid.
+
+Invalid syntax and missing signals display an error instead of an outdated result.
+Removing a referenced signal requires editing the expression. The same division
+threshold, undefined-sample behavior, FFT rules, and CSV export apply to expressions.
+Functions, indexing, attributes, powers, and executable code are not supported.
+Expressions are limited to 256 characters and 128 syntax nodes. Disable custom
+expression mode to return to the operation picker.

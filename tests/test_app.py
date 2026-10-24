@@ -28,7 +28,7 @@ class AppTests(unittest.TestCase):
         app.selectbox(key="signal_mode").select("Discrete").run()
         self.assertFalse(app.exception)
         self.assertEqual(len(app.get("plotly_chart")), 2)
-        app.checkbox[0].uncheck().run()
+        next(box for box in app.checkbox if box.label == "Show input signals").uncheck().run()
         app.button(key="remove_3").click().run()
         self.assertTrue(app.button(key="remove_2").disabled)
         for _ in range(7):

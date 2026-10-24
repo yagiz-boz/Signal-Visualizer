@@ -42,7 +42,7 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(len(app.get("plotly_chart")), 0)
         app.text_input(key="custom_expression").set_value("S1 / (S2 - S2)").run()
         self.assertTrue(app.warning)
-        self.assertEqual(len(app.get("plotly_chart")), 1)
+        self.assertEqual(len(app.get("plotly_chart")), 2)
         app.text_input(key="custom_expression").set_value("S1 +").run()
         self.assertTrue(app.error)
         app.checkbox(key="use_expression").uncheck().run()

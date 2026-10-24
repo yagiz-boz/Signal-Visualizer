@@ -14,7 +14,7 @@ class AppTests(unittest.TestCase):
         for operation in ("Add", "Subtract", "Multiply", "Divide"):
             app.selectbox(key="operation").select(operation).run()
             self.assertFalse(app.exception)
-        self.assertEqual(len(app.get("plotly_chart")), 1)
+        self.assertEqual(len(app.get("plotly_chart")), 2)
         self.assertTrue(app.warning)
         app.selectbox(key="operation").select("Add").run()
         app.button[0].click().run()

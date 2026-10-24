@@ -113,3 +113,13 @@ Frequency and phase are shown only for periodic signals. Empty sampled pulses
 produce a warning. Continuous steps/pulses are not band-limited; finite sampling
 can miss transitions or narrow pulses. Ideal triangle waves also have infinitely
 many harmonics. All new waveforms work with arithmetic, expressions, FFT and CSV.
+## Input and result FFT comparison
+
+Use **Spectra to compare** to overlay any input signals and the result in one
+one-sided amplitude spectrum. All traces use the same sample grid, frequency
+bins and FFT normalization. Colors match the time-domain plot; click legend
+entries to toggle individual curves. Selecting no traces hides the spectrum.
+New signals join the comparison automatically; removing one removes its selection.
+If the result contains undefined samples, its FFT is omitted while valid input
+spectra remain available. Discrete spectra use rad/sample; continuous spectra
+use Hz. Input amplitudes are in V, while result units depend on the operation.

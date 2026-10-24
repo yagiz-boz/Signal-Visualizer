@@ -16,12 +16,19 @@ if "signal_ids" not in st.session_state:
 def add_signal():
     if len(st.session_state.signal_ids) < MAX_SIGNALS:
         st.session_state.signal_ids.append(st.session_state.next_signal_id)
+        if "fft_traces" in st.session_state:
+            traces = list(st.session_state.fft_traces)
+            new_name = f"S{st.session_state.next_signal_id}"
+            traces.insert(traces.index("Result") if "Result" in traces else len(traces), new_name)
+            st.session_state.fft_traces = traces
         st.session_state.next_signal_id += 1
 
 
 def remove_signal(signal_id):
     if len(st.session_state.signal_ids) > 1:
         st.session_state.signal_ids.remove(signal_id)
+        if "fft_traces" in st.session_state:
+            st.session_state.fft_traces = [name for name in st.session_state.fft_traces if name != f"S{signal_id}"]
 
 
 with st.sidebar:
@@ -117,9 +124,12 @@ def chart(x, series, title, xlabel, markers=False):
         indices = np.linspace(0, len(x) - 1, 20000, dtype=int)
         st.caption(f"{title}: displaying 20,000 evenly spaced points. FFT and CSV use all samples.")
     fig = go.Figure()
+    palette = ["#38bdf8", "#a78bfa", "#34d399", "#fb7185", "#facc15", "#22d3ee", "#e879f9", "#94a3b8"]
     for name, values in series:
+        color = "#f97316" if name == "Result" else palette[(int(name[1:]) - 1) % len(palette)]
         fig.add_trace(go.Scattergl(x=x[indices], y=values[indices], name=name,
-                                  mode="markers" if markers else "lines", connectgaps=False))
+                                  mode="markers" if markers else "lines", connectgaps=False,
+                                  marker=dict(color=color), line=dict(color=color)))
     fig.update_layout(title=title, xaxis_title=xlabel, yaxis_title="Amplitude",
                       height=360, margin=dict(l=20, r=20, t=50, b=20))
     st.plotly_chart(fig, width="stretch")
@@ -129,12 +139,22 @@ show_inputs = st.checkbox("Show input signals", value=True)
 series = list(zip(names, signals)) if show_inputs else []
 chart(axis, series + [("Result", result)], "Time domain",
       "Sample index [n]" if discrete else "Time [s]", discrete)
-if np.all(valid):
-    frequencies, magnitudes = amplitude_spectrum(result, fs, angular=discrete)
-    chart(frequencies, [("Result", magnitudes)], "Result: one-sided amplitude spectrum",
+st.subheader("Frequency comparison")
+selected_spectra = st.multiselect("Spectra to compare", names + ["Result"],
+                                  default=names + ["Result"], key="fft_traces")
+spectra = []
+for name, values in list(zip(names, signals)) + [("Result", result)]:
+    if name in selected_spectra and (name != "Result" or np.all(valid)):
+        frequencies, magnitudes = amplitude_spectrum(values, fs, angular=discrete)
+        spectra.append((name, magnitudes))
+if spectra:
+    chart(frequencies, spectra, "One-sided amplitude spectra",
           "Angular frequency [rad/sample]" if discrete else "Frequency [Hz]", True)
-else:
+elif not selected_spectra:
+    st.info("Select at least one signal to display its spectrum.")
+if not np.all(valid):
     st.info("Result FFT is unavailable because some samples are undefined. Adjust denominator signals; missing samples are not replaced with zeros.")
+st.caption("Input and result spectra share the same frequency bins and normalization. Trace colors match the time plot. Inputs are in V; result units depend on the operation, so numerical amplitudes may represent different units.")
 st.caption("Click a legend entry to toggle a trace. Result amplitude units depend on the operation. FFT uses a rectangular window without detrending; non-integer cycles cause spectral leakage. DC and the even-length Nyquist bin are not doubled.")
 st.download_button("Download signals CSV", signals_csv(axis, signals, names, result, discrete),
                    file_name="signals.csv", mime="text/csv")

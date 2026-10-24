@@ -1,26 +1,48 @@
 # Signal Visualizer
 
-A browser-based signal processing demo built with Streamlit, Plotly and NumPy.
+An interactive signal-processing demo built with Streamlit, Plotly and NumPy.
 
 **[Open the live demo](https://signal-visualizer-yagiz-boz.streamlit.app/)**
 
-Web app development uses the `main` branch on GitHub.
+## Quick tour
+
+1. Open **Ready-made experiments**, choose an example and click **Load experiment**.
+2. Read the guide, then change any parameter in the sidebar.
+3. Use **Add signal** for another input. All inputs share one sample grid.
+4. Choose an operation, or enable **Use custom expression**, e.g. `(S1 + S2) * S3`.
+5. Compare time traces and FFT spectra. Click legend entries to hide/show traces.
+6. Try **Hann** or **Hamming** under **FFT window** to explore spectral leakage.
+7. Download samples with **Download signals CSV**, or save the setup with **Save settings JSON**.
+
+On narrow screens, open the sidebar using the arrow in the top-left corner.
 
 ## Features
 
-- Sine, cosine, square, sawtooth, triangle, DC, unit step and rectangular pulse signals.
-- All waveforms available in continuous and discrete modes; periodic discrete frequencies use rad/sample.
-- Add and remove up to eight signals with independent waveform, amplitude, frequency and phase.
-- Shared duration and sampling rate (continuous) or sample count (discrete).
-- Add, subtract, multiply or divide signals from left to right.
-- Overlay inputs and result; toggle traces using the legend.
-- Interactive time-domain and one-sided amplitude plots with zoom, pan and hover.
-- Sampling and harmonic aliasing warnings, input validation and a 100,000-sample limit.
-- CSV download containing every input signal and the result on the shared sample grid.
+- Continuous and discrete sine, cosine, square, sawtooth, triangle, DC, unit step and rectangular pulse signals.
+- Up to eight inputs with independent amplitude, frequency/phase or start/width controls.
+- Shared duration and sampling frequency (continuous) or sample count (discrete).
+- Pointwise addition, subtraction, multiplication and division; mixed expressions with parentheses and numeric constants.
+- Interactive time plots and selectable input/result one-sided amplitude spectra.
+- Rectangular, periodic Hann and periodic Hamming FFT windows with coherent-gain amplitude correction.
+- Full-detail WebGL rendering or extrema-preserving overview for large records.
+- Versioned JSON setup download/upload and complete CSV sample export.
+- Input validation, sample limits, aliasing warnings and undefined-division handling.
+
+## Ready-made experiments
+
+| Experiment | Initial setup and expected observation |
+| --- | --- |
+| Beats | 10 + 11 Hz sines over 3 seconds: 1 Hz beat rate and two spectral peaks. |
+| Phase cancellation | Equal 10 Hz sines separated by 180°: approximately zero sum. |
+| Amplitude modulation | `(1 + S2) * S1`: 40 Hz carrier of amplitude 1 and sidebands of amplitude 0.25 at 35/45 Hz. |
+| Aliasing | A 70 Hz cosine sampled at 100 Hz appears at 30 Hz. |
+| Spectral leakage | A 10.5 Hz sine observed for 1 second falls between FFT bins; compare window choices. |
+
+Loading a preset replaces the setup; save a JSON copy first if needed. Guides describe the initial settings, not live measurements after edits.
 
 ## Run locally
 
-Use Python 3.12 (the locally verified runtime). From the repository root:
+Use Python **3.12**, the runtime used for validation. From the repository root:
 
 ```bash
 python -m venv .venv-web
@@ -31,157 +53,67 @@ python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-Open the local URL printed by Streamlit, usually http://localhost:8501.
+Open the URL printed by Streamlit, normally `http://localhost:8501`.
 
-## Signal processing
+## Operations and waveforms
 
-`signal_processing.py` contains signal generation, the FFT and CSV export.
-`app.py` contains only the Streamlit interface and Plotly presentation.
+The operation picker applies one operation from left to right: `S1 - S2 - S3` means `(S1 - S2) - S3`. A single input passes through unchanged.
 
-Continuous signals are samples in `[0, duration)` spaced by `1 / fs`.
-The one-sided spectrum uses `rfft` and `rfftfreq`, normalized by the window sum (the sample count for Rectangular). Only interior positive-frequency bins are doubled: DC and the Nyquist
-bin (for even sample counts) retain their original scale. For odd lengths,
-the final positive-frequency bin is doubled. Discrete spectra use rad/sample.
+Custom expressions support case-sensitive signal names, finite numbers, `+ - * /`, unary signs and parentheses. Multiplication/division take precedence over addition/subtraction. Constant expressions are broadcast across the sample grid. Functions, powers, indexing and executable code are not supported. Invalid expressions show an error; removed signal names must be edited out of the expression.
 
-The FFT supports Rectangular (default), Hann and Hamming windows without detrending. Non-integer cycles
-produce spectral leakage, so a peak bin need not equal the input amplitude.
-Sample above twice a sinusoid's frequency; sampling exactly at Nyquist can
-lose phase-dependent information. Ideal square and sawtooth waves have
-unbounded harmonics, so finite sampling always aliases some harmonics.
-Full detail plots all samples and FFT bins; FFT calculations and CSV downloads always use the complete data.
+- **DC:** constant at the selected amplitude.
+- **Triangle:** ranges from -amplitude to +amplitude and starts at -amplitude at zero phase.
+- **Unit step:** zero before the start; selected amplitude at and after the start.
+- **Pulse:** selected amplitude on `[start, start + width)`, zero elsewhere. Continuous start/width use seconds; discrete values use integer sample indices/counts. A one-sample discrete pulse is an impulse. Continuous pulses are rectangular, not Dirac deltas.
 
-## Deploy on Streamlit Community Cloud
+Division skips denominators with absolute value at most `1e-10`. Undefined or overflowing results appear as plot gaps and empty CSV cells. Result RMS/FFT are unavailable if any result sample is undefined; input FFTs remain available. Missing samples are never silently replaced by zero.
 
-1. Push the web app files and `requirements.txt` to your GitHub repository.
-2. Sign in at https://share.streamlit.io and choose **Create app**.
-3. Select `yagiz-boz/Signal-Visualizer`, the branch containing the web app,
-   and `app.py` as the entrypoint.
-4. Select a supported Python version matching local development and deploy.
-5. Open and verify the generated public URL. Subsequent changes on the
-   selected branch update the demo automatically.
+## FFT interpretation
 
-No secrets or external services are required by this application.
-See the [official deployment guide](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy).
+Continuous samples span `[0, duration)` at spacing `1 / fs`. Discrete spectra use rad/sample; continuous spectra use Hz. The FFT uses `rfft`/`rfftfreq` without mean removal.
 
-## Legacy applications
+Magnitudes are divided by the sum of window coefficients (`N × coherent gain`). Only interior positive-frequency bins are doubled: DC and the even-length Nyquist bin retain their scale; the final positive bin for odd lengths is doubled. This is an **amplitude spectrum**, not a power spectral density.
 
-`gui.py` (CustomTkinter) and `main.py` (command line) are preserved separately.
-Their optional dependencies are `matplotlib` and `customtkinter`; they are
-not required by the web app. Their original calculations are not used by it.
+Hann/Hamming reduce distant leakage but broaden peaks. Gain correction recovers isolated bin-centered tone amplitudes away from DC/Nyquist; off-bin scalloping, overlapping peaks and boundary phase effects can remain. Windowing does not improve frequency resolution or change bin spacing. DC/slow components can spread into neighboring bins with tapered windows. Very short records give limited spectral information.
 
-## Verification
+## Save and load
+
+**Save settings JSON** stores current-mode input identifiers/parameters, sampling settings, operation/expression, input visibility, FFT trace selection, window and plot detail. Samples are regenerated on load. Hidden settings from the other mode, zoom and legend toggles are not stored.
+
+Expand **Save / load settings**, select a JSON file and click **Load settings**. Validation is atomic: an invalid file leaves the setup unchanged. Files must use version 1, contain 1–8 signals and be at most 64 KB. Older files without window/detail selections default to Rectangular/Full detail.
+
+CSV contains the common time/sample axis, every input and the result, including all samples regardless of plot visibility/detail.
+
+## Limits and practical notes
+
+- Maximum **100,000 samples per input**, eight inputs, 256 expression characters and 128 expression syntax nodes.
+- Full detail sends every sample/FFT bin to the browser for exact zoom. Eight maximum-size inputs can transfer tens of MB; use **Overview** or fewer visible inputs/spectra on slower devices.
+- Overview keeps per-interval minima/maxima independently for each trace. Narrow pulses and peaks are retained, but shapes can be simplified. Gap boundaries are preserved even if the nominal 20,000-point target is exceeded.
+- Sampling above twice a sinusoid's frequency avoids the basic aliasing condition; exactly at Nyquist can lose phase information. Ideal square, sawtooth, triangle, step and pulse signals are not band-limited. Transitions or narrow pulses can be missed by sampling.
+- Products and quotients can introduce additional frequencies; input Nyquist checks do not guarantee an alias-free result. Result units depend on the operation and can differ from the input unit V.
+- The app synthesizes signals; importing recorded signal data and audio is not included in this version.
+
+## Deploy
+
+On [Streamlit Community Cloud](https://share.streamlit.io), select repository **yagiz-boz/Signal-Visualizer**, branch **main**, entrypoint **app.py**, Python **3.12**. Dependencies are pinned in `requirements.txt`. No application secrets or external services are required.
+
+After deployment, pushes to `main` update the app automatically. If changing an existing deployment's repository/branch/entrypoint, follow the [official coordinate-change guide](https://docs.streamlit.io/deploy/streamlit-community-cloud/manage-your-app/rename-your-app).
+
+## Verification and source layout
 
 ```bash
 python -m unittest discover -s tests
 ```
 
-## Multiple-signal arithmetic
+Tests cover numerical FFT/window normalization, waveforms, arithmetic and expressions, settings validation/restore, plotting, presets and Streamlit flows.
 
-Operations run in displayed signal order: subtraction with three signals is (S1 - S2) - S3. One signal passes through unchanged. Signals share one time axis. Removing a signal preserves remaining identifiers and settings.
-
-Division skips denominators with absolute value at most 1e-10. Undefined and overflowing results appear as plot gaps and empty CSV cells. FFT and RMS are unavailable if any result sample is undefined; samples are never silently zero-filled. Multiplication and division can create frequencies beyond the input bandwidth, so input Nyquist checks alone cannot guarantee an alias-free result. Result units depend on the operation.
-
-## Custom expressions
-
-Enable **Use custom expression** to combine signals using different operations,
-for example `(S1 + S2) * S3`, `0.5 * S1 - S2`, or `S1 / (S2 + 2)`.
-Available signal names are listed beside the field and are case-sensitive.
-Numbers, parentheses, unary signs, and `+ - * /` are supported. Multiplication
-and division take precedence over addition and subtraction; parentheses override
-precedence. Constant-only expressions create a constant signal on the shared grid.
-
-Invalid syntax and missing signals display an error instead of an outdated result.
-Removing a referenced signal requires editing the expression. The same division
-threshold, undefined-sample behavior, FFT rules, and CSV export apply to expressions.
-Functions, indexing, attributes, powers, and executable code are not supported.
-Expressions are limited to 256 characters and 128 syntax nodes. Disable custom
-expression mode to return to the operation picker.
-## Additional waveforms
-
-- **DC:** constant at the selected amplitude; no frequency or phase controls.
-- **Triangle:** periodic waveform from -amplitude to +amplitude, starting at
-  -amplitude when phase is zero. Frequency and phase are adjustable.
-- **Unit step:** zero before the start, selected amplitude at and after the start.
-- **Pulse:** rectangular pulse of selected amplitude over [start, start + width).
-  In continuous mode start/width use seconds; this is not a Dirac delta.
-  In discrete mode they use integer sample indices/counts. A width of one sample
-  gives a discrete impulse. Negative starts are allowed.
-
-Frequency and phase are shown only for periodic signals. Empty sampled pulses
-produce a warning. Continuous steps/pulses are not band-limited; finite sampling
-can miss transitions or narrow pulses. Ideal triangle waves also have infinitely
-many harmonics. All new waveforms work with arithmetic, expressions, FFT and CSV.
-## Input and result FFT comparison
-
-Use **Spectra to compare** to overlay any input signals and the result in one
-one-sided amplitude spectrum. All traces use the same sample grid, frequency
-bins and FFT normalization. Colors match the time-domain plot; click legend
-entries to toggle individual curves. Selecting no traces hides the spectrum.
-New signals join the comparison automatically; removing one removes its selection.
-If the result contains undefined samples, its FFT is omitted while valid input
-spectra remain available. Discrete spectra use rad/sample; continuous spectra
-use Hz. Input amplitudes are in V, while result units depend on the operation.
-## Save and load setups
-
-Click **Save settings JSON** in the sidebar to download a versioned setup file.
-It includes active signal names and parameters, shared sampling settings, operation
-or custom expression, input visibility and selected FFT traces. Generated sample
-arrays are not stored; they are reconstructed from the settings.
-
-Expand **Save / load settings**, choose a JSON file and click **Load settings**.
-Loading replaces the current setup only after the whole file passes validation.
-Invalid files leave the current settings unchanged. Files must be version 1,
-at most 64 KB, and contain 1–8 signals within the existing sample limits.
-Only the current continuous/discrete mode is saved; hidden settings from the other
-mode, plot zoom and legend toggles are not included. Keep a saved copy before
-replacing a setup if you want to return to it later.
-## Plot detail and narrow features
-
-**Full detail** is the default: WebGL plots every sample and FFT bin (up to the
-existing 100,000-sample signal limit), so zooming reveals the actual stored data.
-Hover shows the original sample/bin index and precise axis/amplitude values.
-
-**Overview** offers a lighter display for long records by retaining the minimum
-and maximum in each interval, independently for every trace. This preserves
-single-sample pulses, positive/negative spikes and narrow FFT peaks that uniform
-subsampling could miss. Shapes can be simplified; use Full detail for exact zoom.
-Undefined-run boundaries are always retained and plots never connect across gaps.
-The overview targets 20,000 points per trace, but may exceed that when necessary
-to preserve many gaps. Short records are displayed unchanged. Plot detail is
-included in saved JSON setups; older settings files default to Full detail.
-## FFT window selection
-
-Choose **FFT window** to apply Rectangular, Hann or Hamming consistently to all
-selected input and result spectra. Time-domain data and CSV samples are unchanged.
-The selection is saved in settings JSON; older files default to Rectangular.
-
-Hann and Hamming use periodic windows, constructed from N+1 symmetric NumPy
-window coefficients with the final coefficient removed. Magnitudes are divided
-by the sum of the window coefficients (N times coherent gain), then only interior
-positive-frequency bins are doubled. DC and even-length Nyquist retain their scale.
-This is a one-sided amplitude spectrum, not a power spectral density.
-
-Tapering reduces distant leakage but broadens peaks. Gain correction recovers
-isolated bin-centered sinusoid amplitudes away from DC/Nyquist; it does not
-eliminate off-bin scalloping, overlapping lobes or near-boundary phase effects.
-FFT bin spacing is unchanged and windowing does not improve frequency resolution.
-No mean removal is performed: DC and slow components may spread into neighboring
-bins under tapered windows. Very short records offer limited spectral information.
-## Ready-made experiments
-
-Expand **Ready-made experiments**, choose an example and click **Load experiment**.
-Loading replaces the current setup; save settings JSON first to keep a copy.
-All parameters remain editable and each preset has an English guide for its
-initial settings. Changing the dropdown alone does not replace the setup.
-
-| Experiment | Initial setup and expected observation |
+| File | Purpose |
 | --- | --- |
-| Beats | 10 + 11 Hz sine waves, 3 seconds: 1 Hz beat rate and two spectral peaks. |
-| Phase cancellation | Equal 10 Hz sines with 180° phase difference: approximately zero sum. |
-| Amplitude modulation | `(1 + S2) * S1`, 40 Hz carrier and 5 Hz modulator of amplitude 0.5: carrier amplitude 1, sideband amplitudes 0.25 at 35/45 Hz. |
-| Aliasing | 70 Hz cosine sampled at 100 Hz: apparent frequency 30 Hz. |
-| Spectral leakage | 10.5 Hz sine over 1 second: switch FFT window to compare distant leakage and peak broadening. |
+| `app.py` | Streamlit interface and Plotly charts |
+| `signal_processing.py` | Waveforms, arithmetic, expressions, FFT and CSV |
+| `settings.py` | JSON validation and session-state mapping |
+| `plotting.py` | Extrema/gap-preserving overview indices |
+| `presets.py` | Experiment configurations and guides |
+| `tests/` | Numerical and UI tests |
 
-Guides describe preset values, not live measurements after editing. JSON export
-stores the resulting setup, so examples and your modifications can be reloaded.
-Loading a JSON file clears the preset guide to avoid displaying an unrelated lesson.
+Legacy `gui.py` (CustomTkinter) and `main.py` (command line) remain separate. They use optional Matplotlib/CustomTkinter dependencies and their original calculations; the web application does not import them.

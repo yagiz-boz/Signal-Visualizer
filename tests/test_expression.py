@@ -30,8 +30,8 @@ class ExpressionTests(unittest.TestCase):
 
     def test_custom_expression_ui(self):
         app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py"), default_timeout=30).run()
-        app.button[0].click().run()
-        app.button[0].click().run()
+        app.button(key="add_signal").click().run()
+        app.button(key="add_signal").click().run()
         app.checkbox(key="use_expression").check().run()
         app.text_input(key="custom_expression").set_value("(S1 + S2) * S3").run()
         self.assertFalse(app.exception)

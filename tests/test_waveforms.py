@@ -61,7 +61,7 @@ class WaveformTests(unittest.TestCase):
                     self.assertNotIn("Frequency [Hz]", labels)
                 if waveform == "Pulse":
                     self.assertIn("Pulse width [samples]" if mode == "Discrete" else "Pulse width [s]", labels)
-        app.button[0].click().run()
+        app.button(key="add_signal").click().run()
         app.selectbox(key="wave_2").select("DC").run()
         app.checkbox(key="use_expression").check().run()
         app.text_input(key="custom_expression").set_value("S1 + 2 * S2").run()

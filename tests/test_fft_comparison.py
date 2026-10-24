@@ -7,7 +7,7 @@ from streamlit.testing.v1 import AppTest
 class SpectrumComparisonTests(unittest.TestCase):
     def test_selection_invalid_result_and_modes(self):
         app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py"), default_timeout=30).run()
-        app.button[0].click().run()
+        app.button(key="add_signal").click().run()
         app.number_input(key="freq_2").set_value(30.).run()
         self.assertEqual(app.multiselect(key="fft_traces").value, ["S1", "S2", "Result"])
         spectrum = json.loads(app.get("plotly_chart")[1].proto.spec)

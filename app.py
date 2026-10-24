@@ -1,7 +1,9 @@
 """Interactive multi-signal arithmetic on a shared sample grid."""
+import re
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
+from settings import load_settings, dump_settings, settings_state
 from signal_processing import generate_signal, amplitude_spectrum, combine_signals, signals_csv, evaluate_expression
 
 st.set_page_config(page_title="Signal Visualizer", page_icon="〰️", layout="wide")
@@ -31,20 +33,49 @@ def remove_signal(signal_id):
             st.session_state.fft_traces = [name for name in st.session_state.fft_traces if name != f"S{signal_id}"]
 
 
+
+
+def restore_settings():
+    uploaded = st.session_state.get("settings_upload")
+    if uploaded is None:
+        st.session_state.settings_message = (False, "Choose a JSON settings file first.")
+        return
+    try:
+        restored = settings_state(load_settings(uploaded.getvalue()))
+    except ValueError as error:
+        st.session_state.settings_message = (False, str(error))
+        return
+    for key in list(st.session_state):
+        if re.fullmatch(r"(?:wave|amp|phase|freq|omega|start_t|start_n|width_t|width_n)_\d+", key):
+            del st.session_state[key]
+    st.session_state.update(restored)
+    st.session_state.settings_message = (True, "Settings loaded.")
+
+
+with st.sidebar:
+    with st.expander("Save / load settings"):
+        st.file_uploader("Settings JSON", type=["json"], key="settings_upload")
+        st.button("Load settings", key="load_settings", on_click=restore_settings)
+        st.caption("Loading replaces the current setup. Maximum file size: 64 KB.")
+        if "settings_message" in st.session_state:
+            success, message = st.session_state.settings_message
+            (st.success if success else st.error)(message)
+
+
 with st.sidebar:
     st.header("Shared sampling settings")
     mode = st.selectbox("Signal type", ["Continuous", "Discrete"], key="signal_mode")
     discrete = mode == "Discrete"
     if discrete:
-        samples = st.number_input("Number of samples", min_value=2, max_value=100000, value=100, step=1)
+        samples = st.number_input("Number of samples", min_value=2, max_value=100000, value=100, step=1, key="shared_samples")
         duration, fs = 1.0, 1.0
     else:
-        duration = st.number_input("Duration [s]", min_value=0.001, value=1.0)
-        fs = st.number_input("Sampling frequency [Hz]", min_value=0.001, value=1000.0)
+        duration = st.number_input("Duration [s]", min_value=0.001, value=1.0, key="shared_duration")
+        fs = st.number_input("Sampling frequency [Hz]", min_value=0.001, value=1000.0, key="shared_fs")
         samples = 100
     st.caption("All signals share the same sample grid. Maximum: 100,000 samples per signal.")
     st.header("Signals")
-    st.button("Add signal", on_click=add_signal, disabled=len(st.session_state.signal_ids) >= MAX_SIGNALS)
+    st.button("Add signal", key="add_signal", on_click=add_signal, disabled=len(st.session_state.signal_ids) >= MAX_SIGNALS)
     st.caption(f"{len(st.session_state.signal_ids)} / {MAX_SIGNALS} signals")
     parameters = []
     for signal_id in st.session_state.signal_ids:
@@ -135,7 +166,7 @@ def chart(x, series, title, xlabel, markers=False):
     st.plotly_chart(fig, width="stretch")
 
 
-show_inputs = st.checkbox("Show input signals", value=True)
+show_inputs = st.checkbox("Show input signals", value=True, key="show_inputs")
 series = list(zip(names, signals)) if show_inputs else []
 chart(axis, series + [("Result", result)], "Time domain",
       "Sample index [n]" if discrete else "Time [s]", discrete)
@@ -158,3 +189,18 @@ st.caption("Input and result spectra share the same frequency bins and normaliza
 st.caption("Click a legend entry to toggle a trace. Result amplitude units depend on the operation. FFT uses a rectangular window without detrending; non-integer cycles cause spectral leakage. DC and the even-length Nyquist bin are not doubled.")
 st.download_button("Download signals CSV", signals_csv(axis, signals, names, result, discrete),
                    file_name="signals.csv", mime="text/csv")
+
+
+configuration = dict(
+    version=1, mode=mode, duration=duration, sampling_frequency=fs, samples=int(samples),
+    signals=[dict(id=int(name[1:]), waveform=waveform, amplitude=amplitude,
+                  frequency=frequency, phase=phase,
+                  start=int(start) if discrete else start,
+                  pulse_width=int(width) if discrete else width)
+             for name, waveform, amplitude, frequency, phase, start, width in parameters],
+    operation=operation, use_expression=use_expression,
+    expression=expression.replace("−", "-").replace("×", "*"),
+    view=dict(show_inputs=show_inputs, fft_traces=selected_spectra))
+with st.sidebar:
+    st.download_button("Save settings JSON", dump_settings(configuration),
+                       file_name="signal-settings.json", mime="application/json")

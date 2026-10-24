@@ -123,3 +123,17 @@ New signals join the comparison automatically; removing one removes its selectio
 If the result contains undefined samples, its FFT is omitted while valid input
 spectra remain available. Discrete spectra use rad/sample; continuous spectra
 use Hz. Input amplitudes are in V, while result units depend on the operation.
+## Save and load setups
+
+Click **Save settings JSON** in the sidebar to download a versioned setup file.
+It includes active signal names and parameters, shared sampling settings, operation
+or custom expression, input visibility and selected FFT traces. Generated sample
+arrays are not stored; they are reconstructed from the settings.
+
+Expand **Save / load settings**, choose a JSON file and click **Load settings**.
+Loading replaces the current setup only after the whole file passes validation.
+Invalid files leave the current settings unchanged. Files must be version 1,
+at most 64 KB, and contain 1–8 signals within the existing sample limits.
+Only the current continuous/discrete mode is saved; hidden settings from the other
+mode, plot zoom and legend toggles are not included. Keep a saved copy before
+replacing a setup if you want to return to it later.

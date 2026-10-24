@@ -8,7 +8,7 @@ class AppTests(unittest.TestCase):
         app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py"), default_timeout=30).run()
         self.assertFalse(app.exception)
         self.assertEqual(len(app.get("plotly_chart")), 2)
-        app.button[0].click().run()
+        app.button(key="add_signal").click().run()
         app.number_input(key="freq_2").set_value(30.).run()
         app.number_input(key="amp_2").set_value(2.).run()
         for operation in ("Add", "Subtract", "Multiply", "Divide"):
@@ -17,7 +17,7 @@ class AppTests(unittest.TestCase):
         self.assertEqual(len(app.get("plotly_chart")), 2)
         self.assertTrue(app.warning)
         app.selectbox(key="operation").select("Add").run()
-        app.button[0].click().run()
+        app.button(key="add_signal").click().run()
         self.assertEqual(list(app.session_state["signal_ids"]), [1, 2, 3])
         app.button(key="remove_1").click().run()
         self.assertEqual(list(app.session_state["signal_ids"]), [2, 3])
@@ -32,6 +32,6 @@ class AppTests(unittest.TestCase):
         app.button(key="remove_3").click().run()
         self.assertTrue(app.button(key="remove_2").disabled)
         for _ in range(7):
-            app.button[0].click().run()
-        self.assertTrue(app.button[0].disabled)
+            app.button(key="add_signal").click().run()
+        self.assertTrue(app.button(key="add_signal").disabled)
         self.assertFalse(app.exception)

@@ -1,126 +1,71 @@
 # Signal Visualizer
 
-Signal Visualizer is a Python-based application for generating, visualizing, and analyzing continuous-time and discrete-time signals.
-
-The project provides both time-domain and frequency-domain representations of signals using the Fast Fourier Transform (FFT). It also includes a graphical user interface built with CustomTkinter.
+A browser-based signal processing demo built with Streamlit, Plotly and NumPy.
 
 ## Features
 
-* Continuous-time and discrete-time signal generation
-* Sine, cosine, square, and sawtooth waveforms for continuous signals
-* Adjustable amplitude, frequency, phase, duration, and sampling frequency
-* Discrete-time sinusoidal signal generation using angular frequency
-* Time-domain visualization
-* Frequency-domain analysis using FFT
-* Nyquist criterion check and aliasing warning
-* Input validation
-* Graphical user interface with CustomTkinter
+- Sampled continuous sine, cosine, square and sawtooth waves.
+- Discrete-time sine waves with angular frequency in rad/sample.
+- Adjustable amplitude and phase; continuous frequency, duration and sampling rate; discrete sample count.
+- Interactive time-domain and one-sided amplitude plots with zoom, pan and hover.
+- Sampling and harmonic aliasing warnings, input validation and a 100,000-sample limit.
+- CSV download containing every generated sample.
 
-## Technologies
+## Run locally
 
-* Python
-* NumPy
-* Matplotlib
-* CustomTkinter
-
-## Signal Analysis
-
-For continuous signals, the application generates samples according to the selected waveform and sampling frequency.
-
-The frequency spectrum is calculated using NumPy's Fast Fourier Transform:
-
-```python
-fft_result = np.fft.fft(signal)
-```
-
-The corresponding frequency bins are generated using:
-
-```python
-frequency_axis = np.fft.fftfreq(
-    len(signal),
-    d=1 / sampling_frequency
-)
-```
-
-For discrete-time signals, the frequency spectrum is represented using angular frequency in rad/sample.
-
-## Nyquist Criterion
-
-For continuous signals, the application checks whether the selected sampling frequency satisfies the Nyquist criterion:
-
-[
-f_s \geq 2f
-]
-
-If the sampling frequency is below the Nyquist rate, the application displays a warning indicating that aliasing may occur.
-
-## Graphical User Interface
-
-The GUI allows signal parameters to be changed interactively and displays both the time-domain signal and its frequency spectrum.
-
-The interface is built using CustomTkinter, while Matplotlib is embedded inside the application for visualization.
-
-## Installation
-
-Clone the repository:
+Use Python 3.12 (the locally verified runtime). From the repository root:
 
 ```bash
-git clone https://github.com/yagocard/Signal-Visualizer.git
-cd Signal-Visualizer
+python -m venv .venv-web
+# Windows PowerShell:
+.venv-web\Scripts\Activate.ps1
+# macOS / Linux: source .venv-web/bin/activate
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
 
-Install the required dependencies:
+Open the local URL printed by Streamlit, usually http://localhost:8501.
+
+## Signal processing
+
+`signal_processing.py` contains signal generation, the FFT and CSV export.
+`app.py` contains only the Streamlit interface and Plotly presentation.
+
+Continuous signals are samples in `[0, duration)` spaced by `1 / fs`.
+The one-sided spectrum uses `rfft` and `rfftfreq`, normalized by the sample
+count. Only interior positive-frequency bins are doubled: DC and the Nyquist
+bin (for even sample counts) retain their original scale. For odd lengths,
+the final positive-frequency bin is doubled. Discrete spectra use rad/sample.
+
+The FFT uses a rectangular window without detrending. Non-integer cycles
+produce spectral leakage, so a peak bin need not equal the input amplitude.
+Sample above twice a sinusoid's frequency; sampling exactly at Nyquist can
+lose phase-dependent information. Ideal square and sawtooth waves have
+unbounded harmonics, so finite sampling always aliases some harmonics.
+Plots over 20,000 points show a reduced display; FFT calculations and CSV
+downloads always use the complete data.
+
+## Deploy on Streamlit Community Cloud
+
+1. Push the web app files and `requirements.txt` to your GitHub repository.
+2. Sign in at https://share.streamlit.io and choose **Create app**.
+3. Select `yagiz-boz/Signal-Visualizer`, the branch containing the web app,
+   and `app.py` as the entrypoint.
+4. Select a supported Python version matching local development and deploy.
+5. Open and verify the generated public URL. Subsequent changes on the
+   selected branch update the demo automatically.
+
+No secrets or external services are required by this application.
+See the [official deployment guide](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy).
+
+## Legacy applications
+
+`gui.py` (CustomTkinter) and `main.py` (command line) are preserved separately.
+Their optional dependencies are `matplotlib` and `customtkinter`; they are
+not required by the web app. Their original calculations are not used by it.
+
+## Verification
 
 ```bash
-pip install numpy matplotlib customtkinter
+python -m unittest discover -s tests
 ```
-
-Run the graphical interface:
-
-```bash
-python gui.py
-```
-
-The command-line version can also be run using:
-
-```bash
-python main.py
-```
-
-## Project Structure
-
-```text
-Signal-Visualizer/
-├── main.py
-├── gui.py
-├── README.md
-└── .gitignore
-```
-
-## Purpose
-
-This project was developed as a practical introduction to signal processing concepts and Python-based engineering applications.
-
-The main concepts explored in the project include:
-
-* Signal generation
-* Sampling
-* Nyquist criterion
-* Aliasing
-* Discrete-time signals
-* Fast Fourier Transform (FFT)
-* Frequency spectrum visualization
-* GUI development with Python
-
-## Future Improvements
-
-Possible future improvements include:
-
-* Window functions such as Hann and Hamming
-* Multiple signal components
-* Signal filtering
-* Audio signal analysis
-* Exporting generated signals
-* Additional discrete-time waveforms
-
-

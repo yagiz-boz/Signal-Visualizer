@@ -167,3 +167,21 @@ eliminate off-bin scalloping, overlapping lobes or near-boundary phase effects.
 FFT bin spacing is unchanged and windowing does not improve frequency resolution.
 No mean removal is performed: DC and slow components may spread into neighboring
 bins under tapered windows. Very short records offer limited spectral information.
+## Ready-made experiments
+
+Expand **Ready-made experiments**, choose an example and click **Load experiment**.
+Loading replaces the current setup; save settings JSON first to keep a copy.
+All parameters remain editable and each preset has an English guide for its
+initial settings. Changing the dropdown alone does not replace the setup.
+
+| Experiment | Initial setup and expected observation |
+| --- | --- |
+| Beats | 10 + 11 Hz sine waves, 3 seconds: 1 Hz beat rate and two spectral peaks. |
+| Phase cancellation | Equal 10 Hz sines with 180° phase difference: approximately zero sum. |
+| Amplitude modulation | `(1 + S2) * S1`, 40 Hz carrier and 5 Hz modulator of amplitude 0.5: carrier amplitude 1, sideband amplitudes 0.25 at 35/45 Hz. |
+| Aliasing | 70 Hz cosine sampled at 100 Hz: apparent frequency 30 Hz. |
+| Spectral leakage | 10.5 Hz sine over 1 second: switch FFT window to compare distant leakage and peak broadening. |
+
+Guides describe preset values, not live measurements after editing. JSON export
+stores the resulting setup, so examples and your modifications can be reloaded.
+Loading a JSON file clears the preset guide to avoid displaying an unrelated lesson.

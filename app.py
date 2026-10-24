@@ -4,12 +4,16 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 from plotting import plot_indices
+from presets import EXPERIMENTS, experiment_settings
 from settings import load_settings, dump_settings, settings_state
 from signal_processing import generate_signal, amplitude_spectrum, combine_signals, signals_csv, evaluate_expression
 
 st.set_page_config(page_title="Signal Visualizer", page_icon="〰️", layout="wide")
 st.title("Signal Visualizer")
 st.caption("Build signals on a shared sample grid and explore their combined spectrum.")
+if st.session_state.get("experiment_guide") in EXPERIMENTS:
+    preset_name = st.session_state.experiment_guide
+    st.info(f"{preset_name} — Guide for the initial settings: {EXPERIMENTS[preset_name]['guide']} You can edit all settings below; the values in this guide describe the original preset.")
 MAX_SIGNALS = 8
 if "signal_ids" not in st.session_state:
     st.session_state.signal_ids = [1]
@@ -36,6 +40,21 @@ def remove_signal(signal_id):
 
 
 
+def apply_setup(restored):
+    for key in list(st.session_state):
+        if re.fullmatch(r"(?:wave|amp|phase|freq|omega|start_t|start_n|width_t|width_n)_\d+", key):
+            del st.session_state[key]
+    st.session_state.update(restored)
+
+
+def load_experiment():
+    name = st.session_state.experiment_choice
+    restored = settings_state(experiment_settings(name))
+    apply_setup(restored)
+    st.session_state.experiment_guide = name
+    st.session_state.pop("settings_message", None)
+
+
 def restore_settings():
     uploaded = st.session_state.get("settings_upload")
     if uploaded is None:
@@ -46,14 +65,17 @@ def restore_settings():
     except ValueError as error:
         st.session_state.settings_message = (False, str(error))
         return
-    for key in list(st.session_state):
-        if re.fullmatch(r"(?:wave|amp|phase|freq|omega|start_t|start_n|width_t|width_n)_\d+", key):
-            del st.session_state[key]
-    st.session_state.update(restored)
+    apply_setup(restored)
+    st.session_state.pop("experiment_guide", None)
     st.session_state.settings_message = (True, "Settings loaded.")
 
 
 with st.sidebar:
+    with st.expander("Ready-made experiments", expanded=True):
+        choice = st.selectbox("Experiment", ["Choose an experiment", *EXPERIMENTS], key="experiment_choice")
+        st.button("Load experiment", key="load_experiment", on_click=load_experiment,
+                  disabled=choice not in EXPERIMENTS)
+        st.caption("Loading replaces the current setup. Save settings JSON first if you want to keep it.")
     with st.expander("Save / load settings"):
         st.file_uploader("Settings JSON", type=["json"], key="settings_upload")
         st.button("Load settings", key="load_settings", on_click=restore_settings)

@@ -8,8 +8,8 @@ Web app development uses the `main` branch on GitHub.
 
 ## Features
 
-- Sampled continuous sine, cosine, square and sawtooth waves.
-- Discrete-time sine waves with angular frequency in rad/sample.
+- Sine, cosine, square, sawtooth, triangle, DC, unit step and rectangular pulse signals.
+- All waveforms available in continuous and discrete modes; periodic discrete frequencies use rad/sample.
 - Add and remove up to eight signals with independent waveform, amplitude, frequency and phase.
 - Shared duration and sampling rate (continuous) or sample count (discrete).
 - Add, subtract, multiply or divide signals from left to right.
@@ -98,3 +98,18 @@ threshold, undefined-sample behavior, FFT rules, and CSV export apply to express
 Functions, indexing, attributes, powers, and executable code are not supported.
 Expressions are limited to 256 characters and 128 syntax nodes. Disable custom
 expression mode to return to the operation picker.
+## Additional waveforms
+
+- **DC:** constant at the selected amplitude; no frequency or phase controls.
+- **Triangle:** periodic waveform from -amplitude to +amplitude, starting at
+  -amplitude when phase is zero. Frequency and phase are adjustable.
+- **Unit step:** zero before the start, selected amplitude at and after the start.
+- **Pulse:** rectangular pulse of selected amplitude over [start, start + width).
+  In continuous mode start/width use seconds; this is not a Dirac delta.
+  In discrete mode they use integer sample indices/counts. A width of one sample
+  gives a discrete impulse. Negative starts are allowed.
+
+Frequency and phase are shown only for periodic signals. Empty sampled pulses
+produce a warning. Continuous steps/pulses are not band-limited; finite sampling
+can miss transitions or narrow pulses. Ideal triangle waves also have infinitely
+many harmonics. All new waveforms work with arithmetic, expressions, FFT and CSV.

@@ -43,16 +43,31 @@ with st.sidebar:
     for signal_id in st.session_state.signal_ids:
         name = f"S{signal_id}"
         with st.expander(name, expanded=True):
-            waveform = "Sine" if discrete else st.selectbox("Waveform", ["Sine", "Cosine", "Square", "Sawtooth"], key=f"wave_{signal_id}")
+            waveform = st.selectbox("Waveform", ["Sine", "Cosine", "Square", "Sawtooth", "DC", "Triangle", "Unit step", "Pulse"], key=f"wave_{signal_id}")
             amplitude = st.number_input("Amplitude [V]", value=1.0, key=f"amp_{signal_id}")
-            phase = st.number_input("Phase [deg]", value=0.0, key=f"phase_{signal_id}")
-            if discrete:
-                frequency = st.number_input("Angular frequency [rad/sample]", value=float(np.pi / 5), format="%.6f", key=f"omega_{signal_id}")
+            phase, frequency, start, pulse_width = 0.0, 0.0, 0.0, 1 if discrete else 0.1
+            if waveform in ("Sine", "Cosine", "Square", "Sawtooth", "Triangle"):
+                phase = st.number_input("Phase [deg]", value=0.0, key=f"phase_{signal_id}")
+                if discrete:
+                    frequency = st.number_input("Angular frequency [rad/sample]", value=float(np.pi / 5), format="%.6f", key=f"omega_{signal_id}")
+                else:
+                    frequency = st.number_input("Frequency [Hz]", min_value=0.001, value=10.0, key=f"freq_{signal_id}")
+            elif waveform in ("Unit step", "Pulse"):
+                if discrete:
+                    start = st.number_input("Start sample [n]", value=0, step=1, key=f"start_n_{signal_id}")
+                    if waveform == "Pulse":
+                        pulse_width = st.number_input("Pulse width [samples]", min_value=1, value=1, step=1, key=f"width_n_{signal_id}")
+                else:
+                    start = st.number_input("Start time [s]", value=0.25, key=f"start_t_{signal_id}")
+                    if waveform == "Pulse":
+                        pulse_width = st.number_input("Pulse width [s]", min_value=0.000001, value=0.1, format="%.6f", key=f"width_t_{signal_id}")
+                st.caption("Step includes its start sample. Pulse includes its start and excludes its end; a one-sample discrete pulse is an impulse.")
             else:
-                frequency = st.number_input("Frequency [Hz]", min_value=0.001, value=10.0, key=f"freq_{signal_id}")
+                st.caption("DC is constant at the selected amplitude.")
+
             st.button(f"Remove {name}", key=f"remove_{signal_id}", on_click=remove_signal,
                       args=(signal_id,), disabled=len(st.session_state.signal_ids) == 1)
-            parameters.append((name, waveform, amplitude, frequency, phase))
+            parameters.append((name, waveform, amplitude, frequency, phase, start, pulse_width))
 
 operation = st.selectbox("Operation", ["Add", "Subtract", "Multiply", "Divide"], key="operation", disabled=st.session_state.get("use_expression", False))
 symbols = {"Add": "+", "Subtract": "−", "Multiply": "×", "Divide": "/"}
@@ -70,8 +85,8 @@ if not use_expression:
 
 signals = []
 try:
-    for name, waveform, amplitude, frequency, phase in parameters:
-        axis, values, warnings = generate_signal(mode, waveform, amplitude, frequency, phase, duration, fs, samples)
+    for name, waveform, amplitude, frequency, phase, start, pulse_width in parameters:
+        axis, values, warnings = generate_signal(mode, waveform, amplitude, frequency, phase, duration, fs, samples, start, pulse_width)
         signals.append(values)
         for warning in warnings:
             st.warning(f"{name}: {warning}")

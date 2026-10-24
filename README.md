@@ -4,7 +4,7 @@ A browser-based signal processing demo built with Streamlit, Plotly and NumPy.
 
 **[Open the live demo](https://signal-visualizer-yagiz-boz.streamlit.app/)**
 
-Web app development uses the `streamlit-demo` branch on GitHub.
+Web app development uses the `main` branch on GitHub.
 
 ## Features
 

@@ -39,12 +39,11 @@ Open the local URL printed by Streamlit, usually http://localhost:8501.
 `app.py` contains only the Streamlit interface and Plotly presentation.
 
 Continuous signals are samples in `[0, duration)` spaced by `1 / fs`.
-The one-sided spectrum uses `rfft` and `rfftfreq`, normalized by the sample
-count. Only interior positive-frequency bins are doubled: DC and the Nyquist
+The one-sided spectrum uses `rfft` and `rfftfreq`, normalized by the window sum (the sample count for Rectangular). Only interior positive-frequency bins are doubled: DC and the Nyquist
 bin (for even sample counts) retain their original scale. For odd lengths,
 the final positive-frequency bin is doubled. Discrete spectra use rad/sample.
 
-The FFT uses a rectangular window without detrending. Non-integer cycles
+The FFT supports Rectangular (default), Hann and Hamming windows without detrending. Non-integer cycles
 produce spectral leakage, so a peak bin need not equal the input amplitude.
 Sample above twice a sinusoid's frequency; sampling exactly at Nyquist can
 lose phase-dependent information. Ideal square and sawtooth waves have
@@ -150,3 +149,21 @@ Undefined-run boundaries are always retained and plots never connect across gaps
 The overview targets 20,000 points per trace, but may exceed that when necessary
 to preserve many gaps. Short records are displayed unchanged. Plot detail is
 included in saved JSON setups; older settings files default to Full detail.
+## FFT window selection
+
+Choose **FFT window** to apply Rectangular, Hann or Hamming consistently to all
+selected input and result spectra. Time-domain data and CSV samples are unchanged.
+The selection is saved in settings JSON; older files default to Rectangular.
+
+Hann and Hamming use periodic windows, constructed from N+1 symmetric NumPy
+window coefficients with the final coefficient removed. Magnitudes are divided
+by the sum of the window coefficients (N times coherent gain), then only interior
+positive-frequency bins are doubled. DC and even-length Nyquist retain their scale.
+This is a one-sided amplitude spectrum, not a power spectral density.
+
+Tapering reduces distant leakage but broadens peaks. Gain correction recovers
+isolated bin-centered sinusoid amplitudes away from DC/Nyquist; it does not
+eliminate off-bin scalloping, overlapping lobes or near-boundary phase effects.
+FFT bin spacing is unchanged and windowing does not improve frequency resolution.
+No mean removal is performed: DC and slow components may spread into neighboring
+bins under tapered windows. Very short records offer limited spectral information.

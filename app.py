@@ -178,12 +178,14 @@ series = list(zip(names, signals)) if show_inputs else []
 chart(axis, series + [("Result", result)], "Time domain",
       "Sample index [n]" if discrete else "Time [s]", discrete)
 st.subheader("Frequency comparison")
+fft_window = st.selectbox("FFT window", ["Rectangular", "Hann", "Hamming"], key="fft_window")
+st.caption("Hann and Hamming reduce distant spectral leakage but broaden peaks. Window gain is corrected for amplitude comparison; off-bin tones and overlapping peaks can still have amplitude error. Time signals and CSV remain unchanged.")
 selected_spectra = st.multiselect("Spectra to compare", names + ["Result"],
                                   default=names + ["Result"], key="fft_traces")
 spectra = []
 for name, values in list(zip(names, signals)) + [("Result", result)]:
     if name in selected_spectra and (name != "Result" or np.all(valid)):
-        frequencies, magnitudes = amplitude_spectrum(values, fs, angular=discrete)
+        frequencies, magnitudes = amplitude_spectrum(values, fs, angular=discrete, window=fft_window)
         spectra.append((name, magnitudes))
 if spectra:
     chart(frequencies, spectra, "One-sided amplitude spectra",
@@ -193,7 +195,7 @@ elif not selected_spectra:
 if not np.all(valid):
     st.info("Result FFT is unavailable because some samples are undefined. Adjust denominator signals; missing samples are not replaced with zeros.")
 st.caption("Input and result spectra share the same frequency bins and normalization. Trace colors match the time plot. Inputs are in V; result units depend on the operation, so numerical amplitudes may represent different units.")
-st.caption("Click a legend entry to toggle a trace. Result amplitude units depend on the operation. FFT uses a rectangular window without detrending; non-integer cycles cause spectral leakage. DC and the even-length Nyquist bin are not doubled.")
+st.caption(f"Click a legend entry to toggle a trace. Result amplitude units depend on the operation. FFT window: {fft_window}, without detrending; normalized by the window sum. DC and the even-length Nyquist bin are not doubled. Bin spacing stays the same; windowing does not improve frequency resolution.")
 st.download_button("Download signals CSV", signals_csv(axis, signals, names, result, discrete),
                    file_name="signals.csv", mime="text/csv")
 
@@ -207,7 +209,7 @@ configuration = dict(
              for name, waveform, amplitude, frequency, phase, start, width in parameters],
     operation=operation, use_expression=use_expression,
     expression=expression.replace("−", "-").replace("×", "*"),
-    view=dict(show_inputs=show_inputs, fft_traces=selected_spectra, plot_detail=plot_detail))
+    view=dict(show_inputs=show_inputs, fft_traces=selected_spectra, plot_detail=plot_detail, fft_window=fft_window))
 with st.sidebar:
     st.download_button("Save settings JSON", dump_settings(configuration),
                        file_name="signal-settings.json", mime="application/json")

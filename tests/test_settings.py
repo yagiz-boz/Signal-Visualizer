@@ -16,7 +16,7 @@ def example(mode="Continuous"):
                 signals=[dict(id=2, waveform="Sine", amplitude=2., frequency=.5 if discrete else 10., phase=30., start=0 if discrete else 0., pulse_width=1 if discrete else .1),
                          dict(id=5, waveform="Pulse", amplitude=3., frequency=0., phase=0., start=3 if discrete else .25, pulse_width=2 if discrete else .1)],
                 operation="Multiply", use_expression=True, expression="S2 + 0.5 * S5",
-                view=dict(show_inputs=False, fft_traces=["S2", "Result"], plot_detail="Full detail"))
+                view=dict(show_inputs=False, fft_traces=["S2", "Result"], plot_detail="Full detail", fft_window="Rectangular"))
 
 
 class SettingsTests(unittest.TestCase):

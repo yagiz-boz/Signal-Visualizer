@@ -83,14 +83,26 @@ def generate_signal(mode="Continuous", waveform="Sine", amplitude=1.0,
 
 
 
-def amplitude_spectrum(values, sampling_frequency=1.0, angular=False):
-    """Rectangular-window rFFT; double interior bins, never DC or Nyquist."""
+def amplitude_spectrum(values, sampling_frequency=1.0, angular=False, window="Rectangular"):
+    """One-sided rFFT amplitude, normalized by window sum (coherent gain).
+
+    Hann/Hamming are periodic FFT windows. Interior bins are doubled, never
+    DC or even-length Nyquist. This is an amplitude spectrum, not a PSD.
+    """
     values = np.asarray(values, dtype=float)
     if values.ndim != 1 or values.size < 2 or not np.all(np.isfinite(values)):
         raise ValueError("Provide at least two finite, real samples.")
     if not np.isfinite(sampling_frequency) or sampling_frequency <= 0:
         raise ValueError("Sampling frequency must be positive and finite.")
-    magnitude = np.abs(np.fft.rfft(values)) / values.size
+    if window == "Rectangular":
+        weights = np.ones(values.size)
+    elif window == "Hann":
+        weights = np.hanning(values.size + 1)[:-1]
+    elif window == "Hamming":
+        weights = np.hamming(values.size + 1)[:-1]
+    else:
+        raise ValueError("Unknown FFT window. Choose Rectangular, Hann or Hamming.")
+    magnitude = np.abs(np.fft.rfft(values * weights)) / weights.sum()
     magnitude[1:-1 if values.size % 2 == 0 else None] *= 2
     frequency = np.fft.rfftfreq(values.size, d=1 / sampling_frequency)
     return frequency * (2 * np.pi if angular else 1), magnitude

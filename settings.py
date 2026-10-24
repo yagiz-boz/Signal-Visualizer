@@ -69,13 +69,16 @@ def validate_settings(data):
     plot_detail = view.get("plot_detail", "Full detail")
     if plot_detail not in ("Full detail", "Overview"):
         raise ValueError("Invalid plot detail setting.")
+    fft_window = view.get("fft_window", "Rectangular")
+    if fft_window not in ("Rectangular", "Hann", "Hamming"):
+        raise ValueError("Invalid FFT window setting.")
     traces = view.get("fft_traces", list(values) + ["Result"])
     if not isinstance(traces, list) or any(not isinstance(t, str) or t not in [*values, "Result"] for t in traces):
         raise ValueError("Invalid spectrum selection.")
     return dict(version=1, mode=mode, duration=float(duration), sampling_frequency=float(fs),
                 samples=samples, signals=normalized, operation=operation,
                 use_expression=use_expression, expression=expression,
-                view=dict(show_inputs=view.get("show_inputs", True), fft_traces=list(dict.fromkeys(traces)), plot_detail=plot_detail))
+                view=dict(show_inputs=view.get("show_inputs", True), fft_traces=list(dict.fromkeys(traces)), plot_detail=plot_detail, fft_window=fft_window))
 
 
 def load_settings(content):
@@ -101,7 +104,7 @@ def settings_state(data):
                  shared_fs=config["sampling_frequency"], shared_samples=config["samples"],
                  operation=config["operation"], use_expression=config["use_expression"],
                  custom_expression=config["expression"], show_inputs=config["view"]["show_inputs"],
-                 fft_traces=config["view"]["fft_traces"], plot_detail=config["view"]["plot_detail"])
+                 fft_traces=config["view"]["fft_traces"], plot_detail=config["view"]["plot_detail"], fft_window=config["view"]["fft_window"])
     discrete = config["mode"] == "Discrete"
     for signal in config["signals"]:
         i = signal["id"]

@@ -76,3 +76,40 @@ def signal_csv(axis, values, discrete=False):
     writer.writerow(["sample_index" if discrete else "time_s", "amplitude_V"])
     writer.writerows(zip(axis, values))
     return output.getvalue().encode("utf-8")
+
+
+def combine_signals(signals, operation="Add", denominator_tolerance=1e-10):
+    """Apply pointwise arithmetic left to right; invalid results become NaN."""
+    arrays = [np.asarray(signal, dtype=float) for signal in signals]
+    if not arrays or any(a.ndim != 1 or a.size < 2 or not np.all(np.isfinite(a)) for a in arrays):
+        raise ValueError("Provide at least one signal with two or more finite samples.")
+    if any(a.shape != arrays[0].shape for a in arrays):
+        raise ValueError("Signals must share the same sample grid and length.")
+    if operation not in ("Add", "Subtract", "Multiply", "Divide"):
+        raise ValueError("Unknown operation.")
+    if not np.isfinite(denominator_tolerance) or denominator_tolerance < 0:
+        raise ValueError("Denominator tolerance must be finite and nonnegative.")
+    result = arrays[0].copy()
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        for signal in arrays[1:]:
+            if operation == "Add":
+                result += signal
+            elif operation == "Subtract":
+                result -= signal
+            elif operation == "Multiply":
+                result *= signal
+            else:
+                result = np.divide(result, signal, out=np.full_like(result, np.nan),
+                                   where=np.abs(signal) > denominator_tolerance)
+            result[~np.isfinite(result)] = np.nan
+    return result
+
+
+def signals_csv(axis, signals, names, result, discrete=False):
+    """Export aligned inputs and result, with blank undefined-value cells."""
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow(["sample_index" if discrete else "time_s", *names, "result"])
+    for row in zip(axis, *signals, result):
+        writer.writerow([v if np.isfinite(v) else "" for v in row])
+    return output.getvalue().encode("utf-8")

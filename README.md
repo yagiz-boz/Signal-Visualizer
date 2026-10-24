@@ -10,10 +10,13 @@ Web app development uses the `main` branch on GitHub.
 
 - Sampled continuous sine, cosine, square and sawtooth waves.
 - Discrete-time sine waves with angular frequency in rad/sample.
-- Adjustable amplitude and phase; continuous frequency, duration and sampling rate; discrete sample count.
+- Add and remove up to eight signals with independent waveform, amplitude, frequency and phase.
+- Shared duration and sampling rate (continuous) or sample count (discrete).
+- Add, subtract, multiply or divide signals from left to right.
+- Overlay inputs and result; toggle traces using the legend.
 - Interactive time-domain and one-sided amplitude plots with zoom, pan and hover.
 - Sampling and harmonic aliasing warnings, input validation and a 100,000-sample limit.
-- CSV download containing every generated sample.
+- CSV download containing every input signal and the result on the shared sample grid.
 
 ## Run locally
 
@@ -73,3 +76,9 @@ not required by the web app. Their original calculations are not used by it.
 ```bash
 python -m unittest discover -s tests
 ```
+
+## Multiple-signal arithmetic
+
+Operations run in displayed signal order: subtraction with three signals is (S1 - S2) - S3. One signal passes through unchanged. Signals share one time axis. Removing a signal preserves remaining identifiers and settings.
+
+Division skips denominators with absolute value at most 1e-10. Undefined and overflowing results appear as plot gaps and empty CSV cells. FFT and RMS are unavailable if any result sample is undefined; samples are never silently zero-filled. Multiplication and division can create frequencies beyond the input bandwidth, so input Nyquist checks alone cannot guarantee an alias-free result. Result units depend on the operation.

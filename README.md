@@ -2,7 +2,9 @@
 
 An interactive signal-processing demo built with Streamlit, Plotly and NumPy.
 
-**[Open the live demo](https://signal-visualizer-yagiz-boz.streamlit.app/)**
+**[Open the live demo](https://signal-visualizer-main-yagiz-boz.streamlit.app/~/+/)**
+
+The demo runs from `main`. This direct app link avoids the Community Cloud landing-page loading issue observed during the deployment address migration.
 
 ## Quick tour
 
